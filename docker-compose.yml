@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: always
+
+  web:
+    build: ./web
+    command: ./entrypoint.sh
+    volumes:
+      - ./web:/usr/src/app
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=${SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=localhost alinareznikova.sknt.ru 127.0.0.1 [::1]
+      - SQL_ENGINE=django.db.backends.postgresql
+      - SQL_DATABASE=${POSTGRES_DB}
+      - SQL_USER=${POSTGRES_USER}
+      - SQL_PASSWORD=${POSTGRES_PASSWORD}
+      - SQL_HOST=db
+      - SQL_PORT=5432
+    depends_on:
+      - db
+    restart: always
+
+  nginx:
+    image: nginx:1.25-alpine
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/home/app/web/static
+      - media_volume:/home/app/web/media
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:

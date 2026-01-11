@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Управление пользователями</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Пользователь</th>
+            <th>Email</th>
+            <th>Статус</th>
+            <th>Действие</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.email }}</td>
+            <td>
+                {% if u.is_banned %}
+                    <span class="badge bg-danger">ЗАБАНЕН</span>
+                {% else %}
+                    <span class="badge bg-success">Активен</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'toggle_ban' u.id %}" class="btn btn-sm {% if u.is_banned %}btn-outline-success{% else %}btn-outline-danger{% endif %}">
+                    {% if u.is_banned %}Разбанить{% else %}Забанить{% endif %}
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

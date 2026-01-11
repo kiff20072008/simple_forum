@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h1>{{ news.title }}</h1>
+            <p class="text-muted">{{ news.created_at }} | {{ news.author }}</p>
+            <hr>
+            <div>{{ news.content|safe }}</div>
+            <hr>
+            <!-- Реакции -->
+            {% if user.is_authenticated and not user.is_banned %}
+                <a href="{% url 'add_reaction' 'news' news.pk 1 %}" class="btn btn-outline-success btn-sm"><i class="fas fa-thumbs-up"></i> {{ news.get_likes }}</a>
+                <a href="{% url 'add_reaction' 'news' news.pk -1 %}" class="btn btn-outline-danger btn-sm"><i class="fas fa-thumbs-down"></i> {{ news.get_dislikes }}</a>
+            {% else %}
+                 Likes: {{ news.get_likes }} | Dislikes: {{ news.get_dislikes }}
+            {% endif %}
+        </div>
+    </div>
+
+    <h4>Комментарии</h4>
+    {% for comment in news.comments.all %}
+        <div class="card mb-2 bg-light">
+            <div class="card-body py-2">
+                <strong>{{ comment.author }}</strong> <small class="text-muted">{{ comment.created_at }}</small>
+                <p class="mb-1">{{ comment.content }}</p>
+                <!-- Реакции на коммент (упрощенно: модель Post для форума, тут NewsComment) -->
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if can_interact %}
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Отправить комментарий</button>
+        </form>
+    {% endif %}
+{% endblock %}

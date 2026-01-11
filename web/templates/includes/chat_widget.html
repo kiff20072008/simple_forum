@@ -1,0 +1,92 @@
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <i class="fas fa-comments"></i> Чат
+    </div>
+    <div class="card-body p-2" id="chat-box" style="height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+        <!-- Сюда будут грузиться сообщения -->
+        <div class="text-center text-muted mt-5">Загрузка...</div>
+    </div>
+    {% if user.is_authenticated and not user.is_banned %}
+        <div class="card-footer p-2">
+            <div class="input-group">
+                <input type="text" id="chat-input" class="form-control" placeholder="Написать сообщение..." maxlength="500">
+                <button class="btn btn-primary" id="chat-send-btn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    {% elif user.is_banned %}
+        <div class="card-footer text-danger text-center small">Вы забанены в чате.</div>
+    {% else %}
+        <div class="card-footer text-muted text-center small"><a href="{% url 'login' %}">Войдите</a>, чтобы писать.</div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send-btn');
+    let isScrolledToBottom = true;
+
+    // Проверка скролла (если пользователь читает историю, не дергать скролл вниз)
+    chatBox.addEventListener('scroll', () => {
+        isScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 50;
+    });
+
+    function loadMessages() {
+        fetch("{% url 'chat_get' %}")
+            .then(response => response.json())
+            .then(data => {
+                let html = '';
+                data.messages.forEach(msg => {
+                    // Разметка сообщения
+                    let avatar = msg.avatar ? `<img src="${msg.avatar}" class="rounded-circle me-1" width="20" height="20">` : '<i class="fas fa-user-circle me-1"></i>';
+                    let bgClass = msg.is_me ? 'bg-primary text-white ms-auto' : 'bg-white border';
+                    let alignClass = msg.is_me ? 'justify-content-end' : 'justify-content-start';
+
+                    html += `
+                        <div class="d-flex mb-2 ${alignClass}">
+                            <div class="p-2 rounded shadow-sm ${bgClass}" style="max-width: 80%;">
+                                <small class="fw-bold d-block" style="font-size: 0.7em; opacity: 0.8;">
+                                    ${avatar} ${msg.author} <span class="float-end ms-2">${msg.created_at}</span>
+                                </small>
+                                <div>${msg.content}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                chatBox.innerHTML = html;
+                if (isScrolledToBottom) chatBox.scrollTop = chatBox.scrollHeight;
+            });
+    }
+
+    function sendMessage() {
+        const text = chatInput.value;
+        if (!text.trim()) return;
+
+        fetch("{% url 'chat_send' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({message: text})
+        }).then(res => {
+            if (res.ok) {
+                chatInput.value = '';
+                loadMessages();
+            }
+        });
+    }
+
+    if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    }
+
+    // Загружаем сообщения сразу и потом каждые 3 секунды
+    loadMessages();
+    setInterval(loadMessages, 3000);
+});
+</script>
