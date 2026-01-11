@@ -216,3 +216,6 @@ def chat_send_message(request):
             ChatMessage.objects.create(author=request.user, content=content)
             return JsonResponse({'status': 'ok'})
     return JsonResponse({'status': 'error'}, status=400)
+
+def rules(request):
+    return render(request, 'forum/rules.html')

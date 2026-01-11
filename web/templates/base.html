@@ -17,6 +17,9 @@
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Новости</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'forum_index' %}">Форум</a></li>
+
+                    <li class="nav-item"><a class="nav-link" href="{% url 'rules' %}">Правила</a></li>
+
                     {% if user.groups.all.0.name == 'Moderators' or user.is_superuser %}
                         <li class="nav-item"><a class="nav-link text-warning" href="{% url 'staff_users_list' %}">Управление пользователями</a></li>
                     {% endif %}

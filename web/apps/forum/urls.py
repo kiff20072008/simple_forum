@@ -14,5 +14,7 @@ urlpatterns = [
     path('chat/get/', views.chat_get_messages, name='chat_get'),
     path('chat/send/', views.chat_send_message, name='chat_send'),
 
+    path('rules/', views.rules, name='rules'),
+
     path('reaction/<str:model_type>/<int:pk>/<str:value>/', views.add_reaction, name='add_reaction'),
 ]
