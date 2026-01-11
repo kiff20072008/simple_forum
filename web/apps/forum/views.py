@@ -44,6 +44,10 @@ def news_detail(request, pk):
     news = get_object_or_404(News, pk=pk)
     form = NewsCommentForm()
 
+    # Сортировка и получение только корневых комментариев (у которых нет родителя)
+    # Дочерние мы будем доставать в шаблоне через .replies.all
+    root_comments = news.comments.filter(parent__isnull=True).order_by('-created_at')
+
     if request.method == 'POST':
         if not can_interact(request.user):
             return HttpResponseForbidden("Вы забанены или не авторизованы")
@@ -52,11 +56,25 @@ def news_detail(request, pk):
             comment = form.save(commit=False)
             comment.news = news
             comment.author = request.user
+
+            # Проверяем, есть ли parent_id в запросе
+            parent_id = request.POST.get('parent_id')
+            if parent_id:
+                try:
+                    parent_comment = NewsComment.objects.get(id=parent_id)
+                    comment.parent = parent_comment
+                except NewsComment.DoesNotExist:
+                    pass
+
             comment.save()
             return redirect('news_detail', pk=pk)
 
-    return render(request, 'forum/news_detail.html',
-                  {'news': news, 'form': form, 'can_interact': can_interact(request.user)})
+    return render(request, 'forum/news_detail.html', {
+        'news': news,
+        'comments': root_comments,  # Передаем только корневые
+        'form': form,
+        'can_interact': can_interact(request.user)
+    })
 
 
 # === ФОРУМ ===
@@ -123,15 +141,17 @@ def create_thread(request, pk):
 
 def thread_detail(request, pk):
     thread = get_object_or_404(Thread, pk=pk)
-    posts = thread.posts.all()
+
+    # ИЗМЕНЕНИЕ: Берем ВСЕ посты по порядку (линейный вид), а не дерево
+    posts = thread.posts.all().order_by('created_at')
+
     form = PostForm()
 
-    # Логика прав комментирования
+    # Логика прав (без изменений)
     can_reply = False
     if request.user.is_authenticated and not request.user.is_banned:
         if thread.category.is_admin_only:
             if thread.category.is_feedback:
-                # В своей теме связи с администрацией пользователь может отвечать, в чужих - нет (для приватности можно допилить, но пока упростим: писать могут все)
                 can_reply = True
             elif request.user.is_superuser or request.user.groups.filter(name='Moderators').exists():
                 can_reply = True
@@ -146,11 +166,16 @@ def thread_detail(request, pk):
             post = form.save(commit=False)
             post.thread = thread
             post.author = request.user
+            # Parent ID для форума больше не используем (линейная структура)
             post.save()
             return redirect('thread_detail', pk=pk)
 
-    return render(request, 'forum/thread_detail.html',
-                  {'thread': thread, 'posts': posts, 'form': form, 'can_reply': can_reply})
+    return render(request, 'forum/thread_detail.html', {
+        'thread': thread,
+        'posts': posts,
+        'form': form,
+        'can_reply': can_reply
+    })
 
 
 # === РЕАКЦИИ ===

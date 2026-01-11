@@ -19,4 +19,4 @@ python manage.py migrate
 python manage.py shell -c "from django.contrib.auth.models import Group; Group.objects.get_or_create(name='Moderators')"
 python manage.py collectstatic --no-input --clear
 
-exec gunicorn project.wsgi:application --bind 0.0.0.0:8000
+exec gunicorn project.wsgi:application --bind 0.0.0.0:8000 --workers 10 --timeout 120

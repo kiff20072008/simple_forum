@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
+
 {% block content %}
+    <!-- (Верхняя часть с новостью без изменений) -->
     <div class="card mb-4">
         <div class="card-body">
             <h1>{{ news.title }}</h1>
@@ -7,7 +9,6 @@
             <hr>
             <div>{{ news.content|safe }}</div>
             <hr>
-            <!-- Реакции -->
             {% if user.is_authenticated and not user.is_banned %}
                 <a href="{% url 'add_reaction' 'news' news.pk 1 %}" class="btn btn-outline-success btn-sm"><i class="fas fa-thumbs-up"></i> {{ news.get_likes }}</a>
                 <a href="{% url 'add_reaction' 'news' news.pk -1 %}" class="btn btn-outline-danger btn-sm"><i class="fas fa-thumbs-down"></i> {{ news.get_dislikes }}</a>
@@ -17,22 +18,76 @@
         </div>
     </div>
 
-    <h4>Комментарии</h4>
-    {% for comment in news.comments.all %}
-        <div class="card mb-2 bg-light">
-            <div class="card-body py-2">
-                <strong>{{ comment.author }}</strong> <small class="text-muted">{{ comment.created_at }}</small>
-                <p class="mb-1">{{ comment.content }}</p>
-                <!-- Реакции на коммент (упрощенно: модель Post для форума, тут NewsComment) -->
-            </div>
-        </div>
-    {% endfor %}
+    <!-- Блок комментариев -->
+    <h4 class="mb-3">Комментарии</h4>
 
+    <!-- Главная форма ответа (будет перемещаться) -->
     {% if can_interact %}
-        <form method="post" class="mt-4">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Отправить комментарий</button>
-        </form>
+        <div id="reply-form-container" class="mb-4 p-3 bg-light rounded shadow-sm">
+            <h6 id="reply-title">Оставить комментарий</h6>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="parent_id" id="id_parent_id" value="">
+                {{ form.as_p }}
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary btn-sm">Отправить</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-reply" style="display:none;" onclick="resetReplyForm()">Отмена</button>
+                </div>
+            </form>
+        </div>
     {% endif %}
+
+    <!-- Вывод дерева комментариев -->
+    <div class="comment-tree">
+        {% for comment in comments %}
+            <!-- type='news_comment' нужен для URL реакций -->
+            {% include "forum/includes/comment_tree.html" with node=comment type='news_comment' %}
+        {% empty %}
+            <p class="text-muted">Комментариев пока нет.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Скрипты для работы дерева -->
+     <script>
+        // Сворачивание/разворачивание веток
+        function toggleBranch(id) {
+            var el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        // Перемещение формы ответа (без вставки имени)
+        function showReplyForm(parentId, authorName) {
+            // 1. Находим блоки
+            var commentNode = document.getElementById('comment-' + parentId);
+            var formContainer = document.getElementById('reply-form-container');
+
+            // 2. Перемещаем форму под комментарий
+            if (commentNode && formContainer) {
+                commentNode.querySelector('.card-body').after(formContainer);
+            }
+
+            // 3. Заполняем скрытое поле ID и меняем заголовок
+            document.getElementById('id_parent_id').value = parentId;
+            document.getElementById('reply-title').innerText = 'Ответ пользователю ' + authorName;
+            document.getElementById('cancel-reply').style.display = 'inline-block';
+        }
+
+        // Кнопка "Отмена" - возвращает форму на место
+        function resetReplyForm() {
+            var mainContainer = document.querySelector('.comment-tree');
+            var formContainer = document.getElementById('reply-form-container');
+
+            if (mainContainer && formContainer) {
+                mainContainer.before(formContainer);
+            }
+
+            document.getElementById('id_parent_id').value = '';
+            document.getElementById('reply-title').innerText = 'Оставить комментарий';
+            document.getElementById('cancel-reply').style.display = 'none';
+        }
+    </script>
 {% endblock %}

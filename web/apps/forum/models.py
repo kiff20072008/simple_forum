@@ -39,9 +39,17 @@ class News(models.Model):
 class NewsComment(models.Model):
     news = models.ForeignKey(News, related_name='comments', on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE,
+                               verbose_name="Родитель")
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     reactions = GenericRelation(Reaction)
+
+    def get_likes(self):
+        return self.reactions.filter(value=1).count()
+
+    def get_dislikes(self):
+        return self.reactions.filter(value=-1).count()
 
 
 # === ФОРУМ ===
@@ -74,9 +82,17 @@ class Thread(models.Model):
 class ThreadPost(models.Model):
     thread = models.ForeignKey(Thread, related_name='posts', on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    # НОВОЕ ПОЛЕ
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE, verbose_name="Родитель")
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     reactions = GenericRelation(Reaction)
+
+    def get_likes(self):
+        return self.reactions.filter(value=1).count()
+
+    def get_dislikes(self):
+        return self.reactions.filter(value=-1).count()
 
 class ChatMessage(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
